@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSE Sentinel - Colombo Stock Exchange Quantitative Analysis</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #242424;
+            --bg-tertiary: #2d2d2d;
+            --text-primary: #e8eaed;
+            --text-secondary: #9aa0a6;
+            --accent-blue: #4285f4;
+            --accent-green: #0f9d58;
+            --accent-red: #ea4335;
+            --border-color: #3c4043;
+            --hover-bg: #313235;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 20px;
+            font-weight: 500;
+        }
+
+        .logo i {
+            color: var(--accent-blue);
+            font-size: 28px;
+        }
+
+        .search-bar {
+            flex: 1;
+            max-width: 600px;
+            margin: 0 40px;
+        }
+
+        .search-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-container i {
+            position: absolute;
+            left: 16px;
+            color: var(--text-secondary);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px 12px 48px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-blue);
+            background: var(--bg-primary);
+        }
+
+        .api-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-tertiary);
+            border-radius: 20px;
+            font-size: 13px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Market Overview */
+        .market-overview {
+            padding: 24px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .market-tabs {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .market-tab {
+            padding: 12px 0;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .market-tab.active {
+            color: var(--accent-blue);
+            border-bottom-color: var(--accent-blue);
+        }
+
+        .indices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .index-card {
+            background: var(--bg-tertiary);
+            padding: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .index-card:hover {
+            background: var(--hover-bg);
+            border-color: var(--border-color);
+        }
+
+        .index-name {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .index-value {
+            font-size: 20px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .index-change {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+        }
+
+        .positive { color: var(--accent-green); }
+        .negative { color: var(--accent-red); }
+
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 24px;
+            padding: 24px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .chart-section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid var(--border-color);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .stock-info h2 {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .stock-price {
+            font-size: 32px;
+            font-weight: 600;
+            margin: 8px 0;
+        }
+
+        .timeframe-selector {
+            display: flex;
+            gap: 8px;
+            background: var(--bg-tertiary);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .timeframe-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .timeframe-btn.active {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 24px;
+        }
+
+        /* Quantitative Metrics */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .metric-card {
+            background: var(--bg-tertiary);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .metric-value {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .metric-description {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* AI Analysis */
+        .ai-analysis {
+            background: var(--bg-tertiary);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 24px;
+            border: 1px solid var(--border-color);
+        }
+
+        .ai-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .ai-header i {
+            color: var(--accent-blue);
+            font-size: 20px;
+        }
+
+        .ai-header h3 {
+            font-size: 16px;
+        }
+
+        .recommendation-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .recommendation-badge.buy {
+            background: rgba(15, 157, 88, 0.2);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+        }
+
+        .recommendation-badge.sell {
+            background: rgba(234, 67, 53, 0.2);
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+        }
+
+        .recommendation-badge.hold {
+            background: rgba(66, 133, 244, 0.2);
+            color: var(--accent-blue);
+            border: 1px solid var(--accent-blue);
+        }
+
+        .ai-reasoning {
+            background: var(--bg-secondary);
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .analyze-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .analyze-btn:hover {
+            background: #3b78e7;
+        }
+
+        .analyze-btn:disabled {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .sidebar-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .sidebar-card h3 {
+            font-size: 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .watchlist-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 8px;
+        }
+
+        .watchlist-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .watchlist-symbol {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .watchlist-price {
+            text-align: right;
+        }
+
+        .watchlist-value {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .watchlist-change {
+            font-size: 12px;
+        }
+
+        /* Loading State */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            gap: 16px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* News Section */
+        .news-item {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .news-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .news-title {
+            font-size: 14px;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+
+        .news-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* API Key Input */
+        .api-key-section {
+            background: var(--bg-tertiary);
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .api-key-input {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
+        .regime-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .regime-trending {
+            background: rgba(66, 133, 244, 0.2);
+            color: var(--accent-blue);
+        }
+
+        .regime-reverting {
+            background: rgba(251, 188, 5, 0.2);
+            color: #fbbc05;
+        }
+
+        .regime-chaotic {
+            background: rgba(234, 67, 53, 0.2);
+            color: var(--accent-red);
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .indices-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .search-bar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">
+            <i class="fas fa-chart-line"></i>
+            <span>CSE Sentinel</span>
+        </div>
+        <div class="search-bar">
+            <div class="search-container">
+                <i class="fas fa-search"></i>
+                <input type="text" class="search-input" id="stockSearch" placeholder="Search for stocks, symbols & more">
+            </div>
+        </div>
+        <div class="api-status">
+            <div class="status-dot"></div>
+            <span>Live Data</span>
+        </div>
+    </div>
+
+    <!-- Market Overview -->
+    <div class="market-overview">
+        <div class="market-tabs">
+            <div class="market-tab active" data-tab="indices">
+                <i class="fas fa-chart-bar"></i> Market Indices
+            </div>
+            <div class="market-tab" data-tab="gainers">
+                <i class="fas fa-arrow-trend-up"></i> Top Gainers
+            </div>
+            <div class="market-tab" data-tab="losers">
+                <i class="fas fa-arrow-trend-down"></i> Top Losers
+            </div>
+            <div class="market-tab" data-tab="active">
+                <i class="fas fa-fire"></i> Most Active
+            </div>
+        </div>
+        <div class="indices-grid" id="indicesGrid">
+            <!-- Dynamically populated -->
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Chart Section -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <div class="stock-info">
+                    <h2 id="stockSymbol">Select a stock</h2>
+                    <div class="stock-price" id="stockPrice">-</div>
+                    <div class="index-change" id="stockChange">
+                        <i class="fas fa-minus"></i>
+                        <span>-</span>
+                    </div>
+                </div>
+                <div class="timeframe-selector">
+                    <button class="timeframe-btn" data-timeframe="1D">1D</button>
+                    <button class="timeframe-btn" data-timeframe="5D">5D</button>
+                    <button class="timeframe-btn active" data-timeframe="1M">1M</button>
+                    <button class="timeframe-btn" data-timeframe="3M">3M</button>
+                    <button class="timeframe-btn" data-timeframe="1Y">1Y</button>
+                    <button class="timeframe-btn" data-timeframe="ALL">ALL</button>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="priceChart"></canvas>
+            </div>
+
+            <!-- Quantitative Metrics -->
+            <h3 style="margin-bottom: 16px; font-size: 18px;">
+                <i class="fas fa-calculator"></i> Quantitative Metrics
+            </h3>
+            <div class="metrics-grid" id="metricsGrid">
+                <div class="metric-card">
+                    <div class="metric-label">
+                        <i class="fas fa-wave-square"></i>
+                        Hurst Exponent
+                    </div>
+                    <div class="metric-value" id="hurstValue">-</div>
+                    <div class="metric-description">Trend persistence indicator</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-label">
+                        <i class="fas fa-chart-area"></i>
+                        Kurtosis
+                    </div>
+                    <div class="metric-value" id="kurtosisValue">-</div>
+                    <div class="metric-description">Tail risk measure</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-label">
+                        <i class="fas fa-fingerprint"></i>
+                        Shannon Entropy
+                    </div>
+                    <div class="metric-value" id="entropyValue">-</div>
+                    <div class="metric-description">Predictability score</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-label">
+                        <i class="fas fa-equals"></i>
+                        Z-Score (200 DMA)
+                    </div>
+                    <div class="metric-value" id="zscoreValue">-</div>
+                    <div class="metric-description">Price deviation</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-label">
+                        <i class="fas fa-dice"></i>
+                        Kelly Criterion
+                    </div>
+                    <div class="metric-value" id="kellyValue">-</div>
+                    <div class="metric-description">Optimal bet size</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-label">
+                        <i class="fas fa-network-wired"></i>
+                        Market Regime
+                    </div>
+                    <div class="metric-value" id="regimeValue">
+                        <span class="regime-indicator regime-trending">
+                            <i class="fas fa-circle"></i>
+                            Analyzing...
+                        </span>
+                    </div>
+                    <div class="metric-description">Current market state</div>
+                </div>
+            </div>
+
+            <!-- AI Analysis Section -->
+            <div class="ai-analysis">
+                <div class="api-key-section">
+                    <label style="font-size: 13px; color: var(--text-secondary);">
+                        <i class="fas fa-key"></i> Groq API Key
+                    </label>
+                    <input type="password" class="api-key-input" id="groqApiKey" placeholder="Enter your Groq API key for AI analysis">
+                </div>
+
+                <div class="ai-header">
+                    <i class="fas fa-brain"></i>
+                    <h3>AI-Powered Deep Analysis</h3>
+                </div>
+
+                <button class="analyze-btn" id="analyzeBtn">
+                    <i class="fas fa-robot"></i>
+                    Analyze with Groq AI
+                </button>
+
+                <div id="aiResult" style="display: none; margin-top: 16px;">
+                    <div class="recommendation-badge buy" id="recommendationBadge">
+                        <i class="fas fa-chart-line"></i>
+                        <span id="recommendationText">BUY</span>
+                    </div>
+                    <div class="ai-reasoning" id="aiReasoning">
+                        AI analysis will appear here...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <!-- Watchlist -->
+            <div class="sidebar-card">
+                <h3>
+                    <i class="fas fa-star"></i>
+                    My Watchlist
+                </h3>
+                <div id="watchlist">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+
+            <!-- Market News -->
+            <div class="sidebar-card">
+                <h3>
+                    <i class="fas fa-newspaper"></i>
+                    Market News
+                </h3>
+                <div id="newsContainer">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        const state = {
+            currentStock: null,
+            currentTimeframe: '1M',
+            priceChart: null,
+            groqApiKey: localStorage.getItem('groqApiKey') || '',
+            marketData: {},
+            watchlist: JSON.parse(localStorage.getItem('watchlist')) || ['SAMP.N0000', 'COMB.N0000', 'JKH.N0000', 'HNB.N0000']
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            initializeChart();
+            loadMarketOverview();
+            loadWatchlist();
+            setupEventListeners();
+            
+            // Load saved API key
+            if (state.groqApiKey) {
+                document.getElementById('groqApiKey').value = state.groqApiKey;
+            }
+
+            // Load default stock
+            if (state.watchlist.length > 0) {
+                loadStock(state.watchlist[0]);
+            }
+        });
+
+        // Initialize Chart
+        function initializeChart() {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            state.priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Price',
+                        data: [],
+                        borderColor: '#4285f4',
+                        backgroundColor: 'rgba(66, 133, 244, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: '#4285f4',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                title: (items) => {
+                                    return items[0].label;
+                                },
+                                label: (item) => {
+                                    return `LKR ${item.parsed.y.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(60, 64, 67, 0.3)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#9aa0a6',
+                                maxTicksLimit: 8
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(60, 64, 67, 0.3)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#9aa0a6',
+                                callback: (value) => `${value.toFixed(2)}`
+                            },
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Load Market Overview
+        async function loadMarketOverview() {
+            try {
+                const indices = [
+                    { symbol: 'ASPI', name: 'All Share Price Index' },
+                    { symbol: 'S&P SL20', name: 'S&P Sri Lanka 20' }
+                ];
+
+                const html = indices.map(index => `
+                    <div class="index-card" onclick="loadStock('${index.symbol}')">
+                        <div class="index-name">${index.name}</div>
+                        <div class="index-value">-</div>
+                        <div class="index-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>Loading...</span>
+                        </div>
+                    </div>
+                `).join('');
+
+                document.getElementById('indicesGrid').innerHTML = html;
+
+                // Fetch real data
+                fetchMarketData();
+            } catch (error) {
+                console.error('Error loading market overview:', error);
+            }
+        }
+
+        // Fetch Market Data from CSE API
+        async function fetchMarketData() {
+            try {
+                // Using the CSE API endpoints from the documentation
+                const response = await fetch('https://www.cse.lk/api/allSharePrices');
+                const data = await response.json();
+                
+                if (data && data.length > 0) {
+                    // Process and display top gainers
+                    const sorted = data.sort((a, b) => parseFloat(b.percentageChange || 0) - parseFloat(a.percentageChange || 0));
+                    displayTopStocks(sorted.slice(0, 5), 'gainers');
+                }
+            } catch (error) {
+                console.error('Error fetching market data:', error);
+                // Fallback to mock data
+                useMockData();
+            }
+        }
+
+        // Load Stock Data
+        async function loadStock(symbol) {
+            state.currentStock = symbol;
+            document.getElementById('stockSymbol').textContent = symbol;
+
+            // Show loading state
+            document.getElementById('stockPrice').textContent = 'Loading...';
+            
+            try {
+                // Fetch from CSE API
+                const response = await fetch(`https://www.cse.lk/api/stockPrice?symbol=${symbol}`);
+                const data = await response.json();
+
+                if (data) {
+                    updateStockDisplay(data);
+                    await fetchHistoricalData(symbol);
+                    calculateQuantitativeMetrics(symbol);
+                }
+            } catch (error) {
+                console.error('Error loading stock:', error);
+                useMockStockData(symbol);
+            }
+        }
+
+        // Update Stock Display
+        function updateStockDisplay(data) {
+            const price = parseFloat(data.lastTradedPrice || data.price || 0);
+            const change = parseFloat(data.change || 0);
+            const changePercent = parseFloat(data.percentageChange || 0);
+
+            document.getElementById('stockPrice').textContent = `LKR ${price.toFixed(2)}`;
+            
+            const changeEl = document.getElementById('stockChange');
+            const isPositive = change >= 0;
+            
+            changeEl.className = `index-change ${isPositive ? 'positive' : 'negative'}`;
+            changeEl.innerHTML = `
+                <i class="fas fa-arrow-${isPositive ? 'up' : 'down'}"></i>
+                <span>${change.toFixed(2)} (${changePercent.toFixed(2)}%)</span>
+            `;
+        }
+
+        // Fetch Historical Data
+        async function fetchHistoricalData(symbol) {
+            try {
+                // Generate mock historical data for demonstration
+                const days = state.currentTimeframe === '1D' ? 1 : 
+                            state.currentTimeframe === '5D' ? 5 :
+                            state.currentTimeframe === '1M' ? 30 :
+                            state.currentTimeframe === '3M' ? 90 :
+                            state.currentTimeframe === '1Y' ? 365 : 365;
+
+                const historicalData = generateMockHistoricalData(days);
+                updateChart(historicalData);
+            } catch (error) {
+                console.error('Error fetching historical data:', error);
+            }
+        }
+
+        // Generate Mock Historical Data
+        function generateMockHistoricalData(days) {
+            const data = [];
+            const labels = [];
+            let basePrice = 100 + Math.random() * 50;
+
+            for (let i = days; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                
+                // Add some realistic price movement
+                basePrice += (Math.random() - 0.5) * 5;
+                basePrice = Math.max(50, basePrice); // Floor price
+
+                labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                data.push(basePrice);
+            }
+
+            return { labels, data };
+        }
+
+        // Update Chart
+        function updateChart(historicalData) {
+            state.priceChart.data.labels = historicalData.labels;
+            state.priceChart.data.datasets[0].data = historicalData.data;
+            
+            // Update color based on trend
+            const firstPrice = historicalData.data[0];
+            const lastPrice = historicalData.data[historicalData.data.length - 1];
+            const isPositive = lastPrice >= firstPrice;
+
+            state.priceChart.data.datasets[0].borderColor = isPositive ? '#0f9d58' : '#ea4335';
+            state.priceChart.data.datasets[0].backgroundColor = isPositive ? 
+                'rgba(15, 157, 88, 0.1)' : 'rgba(234, 67, 53, 0.1)';
+
+            state.priceChart.update('none');
+        }
+
+        // Calculate Quantitative Metrics
+        function calculateQuantitativeMetrics(symbol) {
+            // Get price data from chart
+            const prices = state.priceChart.data.datasets[0].data;
+            
+            if (!prices || prices.length < 20) {
+                return;
+            }
+
+            // Calculate Hurst Exponent
+            const hurst = calculateHurstExponent(prices);
+            document.getElementById('hurstValue').textContent = hurst.toFixed(3);
+
+            // Calculate Kurtosis
+            const kurtosis = calculateKurtosis(prices);
+            document.getElementById('kurtosisValue').textContent = kurtosis.toFixed(3);
+
+            // Calculate Shannon Entropy
+            const entropy = calculateShannonEntropy(prices);
+            document.getElementById('entropyValue').textContent = entropy.toFixed(3);
+
+            // Calculate Z-Score
+            const zscore = calculateZScore(prices);
+            document.getElementById('zscoreValue').textContent = zscore.toFixed(3);
+
+            // Calculate Kelly Criterion
+            const kelly = calculateKellyCriterion(prices, entropy);
+            document.getElementById('kellyValue').textContent = `${(kelly * 100).toFixed(1)}%`;
+
+            // Determine Market Regime
+            const regime = determineMarketRegime(hurst, entropy, kurtosis);
+            updateMarketRegime(regime);
+        }
+
+        // Hurst Exponent Calculation (R/S Analysis)
+        function calculateHurstExponent(prices) {
+            const returns = [];
+            for (let i = 1; i < prices.length; i++) {
+                returns.push(Math.log(prices[i] / prices[i - 1]));
+            }
+
+            const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+            const deviations = returns.map(r => r - mean);
+            
+            let cumSum = 0;
+            const cumDeviations = deviations.map(d => cumSum += d);
+            
+            const range = Math.max(...cumDeviations) - Math.min(...cumDeviations);
+            const stdDev = Math.sqrt(deviations.reduce((a, b) => a + b * b, 0) / deviations.length);
+            
+            const rs = range / stdDev;
+            const hurst = Math.log(rs) / Math.log(returns.length);
+            
+            return Math.max(0, Math.min(1, hurst)); // Clamp between 0 and 1
+        }
+
+        // Kurtosis Calculation
+        function calculateKurtosis(prices) {
+            const returns = [];
+            for (let i = 1; i < prices.length; i++) {
+                returns.push((prices[i] - prices[i - 1]) / prices[i - 1]);
+            }
+
+            const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+            const variance = returns.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / returns.length;
+            const stdDev = Math.sqrt(variance);
+
+            const fourthMoment = returns.reduce((a, b) => a + Math.pow((b - mean) / stdDev, 4), 0) / returns.length;
+            
+            return fourthMoment - 3; // Excess kurtosis
+        }
+
+        // Shannon Entropy Calculation
+        function calculateShannonEntropy(prices) {
+            // Bin the returns
+            const returns = [];
+            for (let i = 1; i < prices.length; i++) {
+                returns.push((prices[i] - prices[i - 1]) / prices[i - 1]);
+            }
+
+            const bins = 10;
+            const min = Math.min(...returns);
+            const max = Math.max(...returns);
+            const binSize = (max - min) / bins;
+
+            const histogram = new Array(bins).fill(0);
+            returns.forEach(r => {
+                const binIndex = Math.min(Math.floor((r - min) / binSize), bins - 1);
+                histogram[binIndex]++;
+            });
+
+            // Calculate entropy
+            let entropy = 0;
+            const total = returns.length;
+            histogram.forEach(count => {
+                if (count > 0) {
+                    const p = count / total;
+                    entropy -= p * Math.log2(p);
+                }
+            });
+
+            return entropy;
+        }
+
+        // Z-Score Calculation
+        function calculateZScore(prices) {
+            if (prices.length < 200) {
+                // Use all available data if less than 200 points
+                const mean = prices.reduce((a, b) => a + b, 0) / prices.length;
+                const stdDev = Math.sqrt(
+                    prices.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / prices.length
+                );
+                const currentPrice = prices[prices.length - 1];
+                return (currentPrice - mean) / stdDev;
+            }
+
+            // Use 200-day moving average
+            const last200 = prices.slice(-200);
+            const sma200 = last200.reduce((a, b) => a + b, 0) / 200;
+            const stdDev = Math.sqrt(
+                last200.reduce((a, b) => a + Math.pow(b - sma200, 2), 0) / 200
+            );
+            const currentPrice = prices[prices.length - 1];
+            
+            return (currentPrice - sma200) / stdDev;
+        }
+
+        // Kelly Criterion Calculation
+        function calculateKellyCriterion(prices, entropy) {
+            const returns = [];
+            for (let i = 1; i < prices.length; i++) {
+                returns.push((prices[i] - prices[i - 1]) / prices[i - 1]);
+            }
+
+            const wins = returns.filter(r => r > 0);
+            const losses = returns.filter(r => r < 0);
+
+            if (losses.length === 0) return 0.1; // Conservative default
+
+            const winRate = wins.length / returns.length;
+            const avgWin = wins.reduce((a, b) => a + b, 0) / wins.length || 0;
+            const avgLoss = Math.abs(losses.reduce((a, b) => a + b, 0) / losses.length) || 1;
+
+            const kelly = (winRate / avgLoss) - ((1 - winRate) / avgWin);
+            
+            // Adjust by entropy (higher entropy = more uncertainty = smaller bet)
+            const adjustedKelly = kelly * (1 - entropy / 5);
+            
+            return Math.max(0, Math.min(0.25, adjustedKelly)); // Cap at 25%
+        }
+
+        // Determine Market Regime
+        function determineMarketRegime(hurst, entropy, kurtosis) {
+            if (hurst > 0.55 && entropy < 2.5) {
+                return { type: 'trending', label: 'Trending', class: 'regime-trending' };
+            } else if (hurst < 0.45 && entropy < 2.5) {
+                return { type: 'reverting', label: 'Mean-Reverting', class: 'regime-reverting' };
+            } else {
+                return { type: 'chaotic', label: 'Chaotic/High-Noise', class: 'regime-chaotic' };
+            }
+        }
+
+        // Update Market Regime Display
+        function updateMarketRegime(regime) {
+            const regimeEl = document.getElementById('regimeValue');
+            regimeEl.innerHTML = `
+                <span class="regime-indicator ${regime.class}">
+                    <i class="fas fa-circle"></i>
+                    ${regime.label}
+                </span>
+            `;
+        }
+
+        // AI Analysis with Groq
+        async function analyzeWithGroq() {
+            const apiKey = document.getElementById('groqApiKey').value.trim();
+            
+            if (!apiKey) {
+                alert('Please enter your Groq API key');
+                return;
+            }
+
+            // Save API key
+            localStorage.setItem('groqApiKey', apiKey);
+            state.groqApiKey = apiKey;
+
+            const btn = document.getElementById('analyzeBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+
+            try {
+                // Gather metrics
+                const hurst = parseFloat(document.getElementById('hurstValue').textContent);
+                const kurtosis = parseFloat(document.getElementById('kurtosisValue').textContent);
+                const entropy = parseFloat(document.getElementById('entropyValue').textContent);
+                const zscore = parseFloat(document.getElementById('zscoreValue').textContent);
+                const kelly = document.getElementById('kellyValue').textContent;
+                const regime = document.getElementById('regimeValue').textContent.trim();
+
+                const prices = state.priceChart.data.datasets[0].data;
+                const residuals = calculateFractionalResiduals(prices);
+
+                // Construct prompt
+                const prompt = `### CORE OBJECTIVE
+Perform a High-Dimensional Quantitative Analysis on the following financial time-series data. 
+Search for non-linear relationships and regime shifts.
+
+### MATHEMATICAL INPUTS
+- Ticker: ${state.currentStock}
+- Hurst Exponent: ${hurst} (Determines trend persistence vs. mean reversion)
+- Kurtosis: ${kurtosis} (Risk of tail events/outliers)
+- Shannon Entropy: ${entropy} (Information density/predictability)
+- Z-Score (Price vs. 200DMA): ${zscore}
+- Kelly Criterion: ${kelly}
+- Market Regime: ${regime}
+- Fractional Difference Residuals: [${residuals.slice(0, 10).join(', ')}...]
+
+### DEEP REASONING PROTOCOL
+1. REGIME IDENTIFICATION: Based on the Hurst Exponent and Entropy, determine if the market is in a 'High-Noise Random Walk' or a 'Low-Entropy Momentum State'.
+2. PROBABILITY DISTRIBUTION: Use the Skewness and Kurtosis to estimate the 'Value at Risk' (VaR) for a 1-standard deviation move.
+3. FRACTAL ANALYSIS: Analyze the price residuals. If the Z-score is > 2 and Hurst is > 0.6, evaluate the probability of a 'Blow-off Top' vs. a 'Breakout'.
+4. KELLY CRITERION: Calculate the optimal fraction of capital to risk based on the Signal-to-Noise ratio derived from the provided Entropy score.
+
+### OUTPUT SPECIFICATIONS
+Provide a concise analysis in the following format:
+
+**RECOMMENDATION:** [BUY / HOLD / SELL]
+
+**MARKET REGIME:** [Classification]
+
+**PREDICTIVE ALPHA SCORE:** [Value from -1.0 to +1.0]
+
+**EXPECTED VALUE:** [Analysis of long/short position]
+
+**RISK ASSESSMENT:** [Key risks and invalidation points]
+
+**REASONING:** [2-3 sentences explaining the recommendation based on the quantitative metrics]`;
+
+                // Call Groq API
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'mixtral-8x7b-32768',
+                        messages: [{
+                            role: 'user',
+                            content: prompt
+                        }],
+                        temperature: 0.7,
+                        max_tokens: 1000
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Groq API error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const analysis = data.choices[0].message.content;
+
+                displayAIAnalysis(analysis);
+
+            } catch (error) {
+                console.error('Error with Groq analysis:', error);
+                alert('Error analyzing with Groq AI. Please check your API key and try again.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-robot"></i> Analyze with Groq AI';
+            }
+        }
+
+        // Calculate Fractional Residuals
+        function calculateFractionalResiduals(prices) {
+            const returns = [];
+            for (let i = 1; i < prices.length; i++) {
+                returns.push(Math.log(prices[i] / prices[i - 1]));
+            }
+
+            // Simple fractional differencing (d=0.5)
+            const residuals = [];
+            for (let i = 1; i < returns.length; i++) {
+                residuals.push(returns[i] - 0.5 * returns[i - 1]);
+            }
+
+            return residuals;
+        }
+
+        // Display AI Analysis
+        function displayAIAnalysis(analysis) {
+            const resultDiv = document.getElementById('aiResult');
+            resultDiv.style.display = 'block';
+
+            // Extract recommendation
+            const recMatch = analysis.match(/\*\*RECOMMENDATION:\*\*\s*(BUY|HOLD|SELL)/i);
+            const recommendation = recMatch ? recMatch[1].toUpperCase() : 'HOLD';
+
+            const badge = document.getElementById('recommendationBadge');
+            const recText = document.getElementById('recommendationText');
+            
+            badge.className = `recommendation-badge ${recommendation.toLowerCase()}`;
+            recText.textContent = recommendation;
+
+            // Update icon
+            const icon = recommendation === 'BUY' ? 'fa-arrow-trend-up' :
+                        recommendation === 'SELL' ? 'fa-arrow-trend-down' : 'fa-minus';
+            badge.querySelector('i').className = `fas ${icon}`;
+
+            // Display full analysis
+            document.getElementById('aiReasoning').innerHTML = analysis.replace(/\*\*/g, '<strong>').replace(/\n/g, '<br>');
+        }
+
+        // Load Watchlist
+        function loadWatchlist() {
+            const container = document.getElementById('watchlist');
+            
+            if (state.watchlist.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-secondary); font-size: 13px;">No stocks in watchlist</p>';
+                return;
+            }
+
+            const html = state.watchlist.map(symbol => `
+                <div class="watchlist-item" onclick="loadStock('${symbol}')">
+                    <div>
+                        <div class="watchlist-symbol">${symbol}</div>
+                    </div>
+                    <div class="watchlist-price">
+                        <div class="watchlist-value">LKR ${(100 + Math.random() * 50).toFixed(2)}</div>
+                        <div class="watchlist-change positive">+${(Math.random() * 5).toFixed(2)}%</div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+        }
+
+        // Setup Event Listeners
+        function setupEventListeners() {
+            // Timeframe selector
+            document.querySelectorAll('.timeframe-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.timeframe-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    state.currentTimeframe = e.target.dataset.timeframe;
+                    
+                    if (state.currentStock) {
+                        fetchHistoricalData(state.currentStock);
+                    }
+                });
+            });
+
+            // Analyze button
+            document.getElementById('analyzeBtn').addEventListener('click', analyzeWithGroq);
+
+            // Stock search
+            document.getElementById('stockSearch').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const symbol = e.target.value.trim().toUpperCase();
+                    if (symbol) {
+                        loadStock(symbol);
+                    }
+                }
+            });
+
+            // Market tabs
+            document.querySelectorAll('.market-tab').forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    document.querySelectorAll('.market-tab').forEach(t => t.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                    // Load corresponding data
+                });
+            });
+        }
+
+        // Mock data fallback
+        function useMockData() {
+            const mockStocks = [
+                { symbol: 'SAMP.N0000', name: 'Sampath Bank', price: 85.50, change: 2.30, percent: 2.76 },
+                { symbol: 'COMB.N0000', name: 'Commercial Bank', price: 112.00, change: -1.50, percent: -1.32 },
+                { symbol: 'JKH.N0000', name: 'John Keells Holdings', price: 148.75, change: 3.25, percent: 2.23 },
+                { symbol: 'HNB.N0000', name: 'Hatton National Bank', price: 198.50, change: 4.50, percent: 2.32 },
+                { symbol: 'NDB.N0000', name: 'NDB Bank', price: 68.25, change: -0.75, percent: -1.09 }
+            ];
+
+            const html = mockStocks.map(stock => {
+                const isPositive = stock.change >= 0;
+                return `
+                    <div class="index-card" onclick="loadStock('${stock.symbol}')">
+                        <div class="index-name">${stock.name}</div>
+                        <div class="index-value">LKR ${stock.price.toFixed(2)}</div>
+                        <div class="index-change ${isPositive ? 'positive' : 'negative'}">
+                            <i class="fas fa-arrow-${isPositive ? 'up' : 'down'}"></i>
+                            <span>${stock.change.toFixed(2)} (${stock.percent.toFixed(2)}%)</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('indicesGrid').innerHTML = html;
+        }
+
+        function useMockStockData(symbol) {
+            updateStockDisplay({
+                lastTradedPrice: 100 + Math.random() * 50,
+                change: (Math.random() - 0.5) * 10,
+                percentageChange: (Math.random() - 0.5) * 5
+            });
+            
+            fetchHistoricalData(symbol);
+            calculateQuantitativeMetrics(symbol);
+        }
+    </script>
+</body>
+</html>
